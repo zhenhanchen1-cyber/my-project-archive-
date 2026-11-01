@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05060a">
+<title>ODYSSEY · 寰宇坠落</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <div id="ui">
+    <header id="topbar">
+      <div class="brand">
+        <span class="brand-mark">◈</span>
+        <div class="brand-text">
+          <b>ODYSSEY</b>
+          <em>寰 宇 坠 落</em>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="btn-sound" class="ghost" type="button" aria-pressed="true"><span class="dot"></span>SOUND</button>
+        <button id="btn-ui" class="ghost" type="button">HIDE UI</button>
+      </div>
+    </header>
+
+    <div id="letterbox"><i class="lb lb-top"></i><i class="lb lb-bottom"></i></div>
+
+    <section id="intro" aria-live="polite">
+      <div class="chapter-head">
+        <span class="chapter-num" id="chapter-num">01</span>
+        <span class="chapter-slash">/</span>
+        <span class="chapter-total">08</span>
+        <span class="chapter-rule"></span>
+        <span class="chapter-en" id="chapter-en">SINGULARITY</span>
+      </div>
+      <div class="chapter-copy">
+        <h1 id="chapter-title">奇点</h1>
+        <p id="chapter-desc">一切从这里开始。</p>
+      </div>
+      <div class="intro-foot">
+        <div class="intro-progress">
+          <div class="intro-track"><i id="intro-fill"></i></div>
+          <div class="intro-meta">
+            <span id="intro-phase">原始之光</span>
+            <span id="intro-clock">T+00:00</span>
+          </div>
+        </div>
+        <button id="btn-skip" class="skip" type="button">跳过开场 <span>SKIP&nbsp;↗</span></button>
+      </div>
+    </section>
+
+    <section id="drive-hud" aria-live="polite">
+      <div class="hud-left">
+        <div class="biome">
+          <span class="eyebrow" id="biome-en">NEON SPRAWL</span>
+          <h2 id="biome-zh">霓虹街区</h2>
+          <span class="biome-sub">SECTOR 07 · 127 KM RING ROAD</span>
+        </div>
+        <div class="speedo">
+          <div class="speed-read"><span id="speed-value">000</span><em>KM/H</em></div>
+          <div class="speed-track"><i id="speed-fill"></i><u></u><u></u><u></u><u></u><u></u></div>
+          <div class="speed-meta"><span>ODYSSEY 07</span><span>AWD · HYPER</span></div>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <div class="clock">
+          <div class="dial" id="dial">
+            <span class="dial-arc day"></span>
+            <span class="dial-arc night"></span>
+            <span class="dial-marker" id="dial-marker"></span>
+            <span class="dial-center"></span>
+          </div>
+          <div class="clock-text"><span id="clock-value">18:21</span><em>LOCAL TIME · DAY 01</em></div>
+        </div>
+
+        <div class="controls">
+          <div class="segmented" role="group" aria-label="相机模式">
+            <button type="button" data-mode="chase" class="active">赛车视角</button>
+            <button type="button" data-mode="orbit">城市全景</button>
+          </div>
+          <div class="timerow">
+            <span class="micro">TIME</span>
+            <div class="segmented small" role="group" aria-label="时间流速">
+              <button type="button" data-time="1" class="active">×1</button>
+              <button type="button" data-time="4">×4</button>
+              <button type="button" data-time="16">×16</button>
+            </div>
+            <button type="button" id="btn-pause" class="iconbtn" aria-label="暂停时间">Ⅱ</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hints">
+        <span><i>DRAG</i> 环视</span>
+        <span><i>SCROLL</i> 推拉</span>
+        <span><i>C</i> 切换视角</span>
+        <span><i>SPACE</i> 暂停时间</span>
+        <span><i>H</i> 隐藏界面</span>
+      </div>
+
+      <div class="car-tag"><span>ODYSSEY</span><b>07</b><em>QUAD-MOTOR · 1,140kW</em></div>
+      <div class="orbit-hint" id="orbit-hint">全景视角 · 拖动旋转 · 滚轮缩放 · 按 <b>C</b> 回到赛车</div>
+    </section>
+
+    <div id="toast"><span id="toast-en"></span><b id="toast-zh"></b></div>
+    <button id="ui-restore" class="ui-restore" type="button">显示界面 <span>H</span></button>
+  </div>
+
+  <div id="flash"></div>
+  <div id="fade"></div>
+
+  <section id="loading">
+    <div class="load-orbit"><i></i><i></i><i></i><span></span></div>
+    <div class="load-inner">
+      <div class="load-kicker">AN INTERACTIVE DESCENT · 2026</div>
+      <h1>ODYSSEY</h1>
+      <div class="load-cn">寰 宇 坠 落</div>
+      <p class="load-blurb">从第一束光，到一座永夜之城。</p>
+      <div class="load-status" id="load-status">正在点燃奇点</div>
+      <div class="load-bar"><i id="load-fill"></i></div>
+      <button id="btn-start" class="start" type="button" hidden>
+        <span>开始旅程</span><em>ENTER THE DESCENT</em>
+      </button>
+      <div class="load-foot">
+        <span>建议全屏 · 佩戴耳机</span>
+        <span>WEBGL 2 · REALTIME</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
