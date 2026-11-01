@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>层叠剪纸动效 MV · 复刻体验</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070b12;
+      --card-bg: rgba(18, 25, 38, 0.85);
+      --border-color: rgba(255, 255, 255, 0.12);
+      --accent-gold: #f4c062;
+      --accent-glow: rgba(244, 192, 98, 0.4);
+      --text-main: #f0f3f8;
+      --text-muted: #8b9bb4;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 20%, #111a29 0%, #060910 100%);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      overflow-x: hidden;
+      padding: 16px 20px 40px;
+    }
+
+    /* 顶部导航与元信息 */
+    header {
+      width: 100%;
+      max-width: 1060px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 0 4px;
+    }
+
+    .title-group h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(244, 192, 98, 0.2), rgba(220, 120, 70, 0.2));
+      border: 1px solid rgba(244, 192, 98, 0.4);
+      color: var(--accent-gold);
+    }
+
+    .meta-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* 主舞台容器 */
+    .stage-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 1024px;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-color);
+    }
+
+    #mv-stage {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 对照原版视频画中画窗口 */
+    #reference-video {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 240px;
+      aspect-ratio: 16 / 9;
+      border-radius: 8px;
+      border: 1.5px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
+      background: #000;
+      z-index: 10;
+      display: none;
+      pointer-events: auto;
+      object-fit: cover;
+    }
+
+    #reference-video.show {
+      display: block;
+    }
+
+    /* 播放提示遮罩 */
+    .play-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(4, 8, 15, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 20;
+      cursor: pointer;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .play-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .big-play-btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f4c062, #e08b35);
+      border: none;
+      box-shadow: 0 0 30px rgba(244, 192, 98, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .big-play-btn:hover {
+      transform: scale(1.1);
+    }
+
+    .big-play-btn svg {
+      width: 28px;
+      height: 28px;
+      fill: #151006;
+      margin-left: 4px;
+    }
+
+    .overlay-text {
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    }
+
+    /* 控制面板 */
+    .control-panel {
+      width: 100%;
+      max-width: 1024px;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-top: 14px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #f4c062, #ff7b54);
+      border-radius: 999px;
+      position: relative;
+      transition: width 0.05s linear;
+    }
+
+    .progress-handle {
+      position: absolute;
+      right: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 8px rgba(0,0,0,0.5);
+    }
+
+    /* 9 个镜头的打点标记 */
+    .shot-markers {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .shot-mark {
+      position: absolute;
+      top: -3px;
+      bottom: -3px;
+      width: 2px;
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .controls-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ctrl-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-main);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .ctrl-btn.active {
+      background: rgba(244, 192, 98, 0.2);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .time-readout {
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .time-readout span {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    /* 镜头快速跳转标签 */
+    .shots-nav {
+      width: 100%;
+      max-width: 1024px;
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+      gap: 6px;
+    }
+
+    .shot-nav-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 8px 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.76rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: center;
+      transition: all 0.2s;
+    }
+
+    .shot-nav-btn:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: #fff;
+    }
+
+    .shot-nav-btn.active {
+      background: linear-gradient(135deg, rgba(244, 192, 98, 0.25), rgba(220, 120, 70, 0.15));
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+
+    .shot-nav-btn .time {
+      font-size: 0.68rem;
+      opacity: 0.65;
+    }
+
+    /* 歌词与提示词展示面板 */
+    .info-card {
+      width: 100%;
+      max-width: 1024px;
+      margin-top: 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+
+    .info-header {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent-gold);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .current-shot-desc {
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: var(--text-main);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-group">
+      <h1>层叠剪纸动效 MV <span class="badge">代码逐帧手绘复刻版</span></h1>
+      <p class="meta-subtitle">原生 SVG + Canvas 纸偶层次驱动 · 精确时间码卡点 · 完整 9 镜头全还原</p>
+    </div>
+  </header>
+
+  <div class="stage-wrapper" id="stageContainer">
+    <!-- SVG 动画舞台 -->
+    <svg id="mv-stage" viewBox="0 0 1024 576" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- 剪纸阴影滤镜：模拟纸张真实堆叠的高级投影 -->
+        <filter id="paper-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.45" />
+        </filter>
+        <filter id="paper-shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.3" />
+        </filter>
+        <filter id="lantern-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id="moon-glow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="15" result="glow" />
+          <feMerge>
+            <feMergeNode in="glow" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        <!-- 纸张纹理微噪点 -->
+        <filter id="paper-texture">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise" />
+          <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.05 0" />
+          <feComposite in2="SourceGraphic" in="gl" operator="in" />
+        </filter>
+
+        <!-- 渐变定义 -->
+        <!-- 镜头1、2、4、9 夜空渐变 -->
+        <linearGradient id="night-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#071322" />
+          <stop offset="60%" stop-color="#0c2038" />
+          <stop offset="100%" stop-color="#142e4e" />
+        </linearGradient>
+
+        <!-- 镜头3 暖调夜空 -->
+        <linearGradient id="warm-night-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#181324" />
+          <stop offset="60%" stop-color="#2d1c31" />
+          <stop offset="100%" stop-color="#462c3e" />
+        </linearGradient>
+
+        <!-- 镜头5 黄昏天际线渐变 -->
+        <linearGradient id="sunset-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#341838" />
+          <stop offset="45%" stop-color="#6e3557" />
+          <stop offset="75%" stop-color="#a8526d" />
+          <stop offset="100%" stop-color="#d9828d" />
+        </linearGradient>
+
+        <!-- 镜头7 孔明灯金夜渐变 -->
+        <linearGradient id="amber-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#201305" />
+          <stop offset="50%" stop-color="#41260b" />
+          <stop offset="100%" stop-color="#694014" />
+        </linearGradient>
+
+        <!-- 灯笼光晕径向渐变 -->
+        <radialGradient id="lantern-radial" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffe28a" stop-opacity="1" />
+          <stop offset="40%" stop-color="#ffb703" stop-opacity="0.8" />
+          <stop offset="70%" stop-color="#fb8500" stop-opacity="0.3" />
+          <stop offset="100%" stop-color="#fb8500" stop-opacity="0" />
+        </radialGradient>
+
+        <!-- 镜头8 眼睛遮罩剪裁路径 -->
+        <clipPath id="eye-clip">
+          <path d="M 80 288 Q 512 110 944 288 Q 512 466 80 288 Z" />
+        </clipPath>
+      </defs>
+
+      <!-- 动态舞台渲染层（由 JS 逐帧控制更新） -->
+      <g id="scene-root"></g>
+
+      <!-- 统一歌词字幕层（卡点显示，带宣纸金光质感） -->
+      <g id="lyric-layer" transform="translate(512, 515)">
+        <text id="lyric-text" text-anchor="middle" font-family="'Noto Serif SC', 'Songti SC', 'STSong', serif" font-size="25" font-weight="600" fill="#fff5e6" letter-spacing="4" filter="url(#paper-shadow-soft)"></text>
+      </g>
+    </svg>
+
+    <!-- 原版对照画中画 -->
+    <video id="reference-video" src="reference.mp4" playsinline muted></video>
+
+    <!-- 初始播放引导遮罩 -->
+    <div class="play-overlay" id="playOverlay">
+      <button class="big-play-btn" id="startBtn">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div class="overlay-text">点击聆听音乐并启航动效 MV</div>
+    </div>
+  </div>
+
+  <!-- 控制条 -->
+  <div class="control-panel">
+    <div class="progress-bar-container" id="progressContainer">
+      <div class="progress-fill" id="progressFill">
+        <div class="progress-handle"></div>
+      </div>
+      <div class="shot-markers" id="shotMarkers"></div>
+    </div>
+
+    <div class="controls-row">
+      <div class="btn-group">
+        <button class="ctrl-btn" id="playPauseBtn">
+          <span id="playIcon">▶ 播放</span>
+        </button>
+        <button class="ctrl-btn" id="restartBtn">↺ 重放</button>
+        <button class="ctrl-btn" id="compareToggleBtn">
+          <span>◫ 对照原版视频</span>
+        </button>
+      </div>
+
+      <div class="time-readout">
+        <span id="curTime">00:00.0</span> / 00:24.1
+      </div>
+
+      <div class="btn-group">
+        <button class="ctrl-btn" id="fullscreenBtn">⛶ 全屏</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 镜头快捷导航 -->
+  <div class="shots-nav" id="shotsNav"></div>
+
+  <!-- 提示与分镜解读卡片 -->
+  <div class="info-card">
+    <div class="info-header">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+      当前分镜与代码设计亮点
+    </div>
+    <div class="current-shot-desc" id="shotDescription">
+      点击播放，即可跟随 BGM 节奏欣赏逐帧手绘的 9 组层叠剪纸动效。
+    </div>
+  </div>
+
+  <!-- 音频载入 -->
+  <audio id="bgmAudio" src="bgm.mp3" preload="auto"></audio>
+
+  <script>
+    // 9 个镜头的元数据配置
+    const SHOTS = [
+      {
+        id: 1,
+        title: "① 启航",
+        start: 0.0,
+        end: 3.6,
+        lyric: "跨越过多远海洋去看你",
+        desc: "大月亮高悬夜空，6层剪纸波浪逐拍自底向上翻涌叠起；第7拍纸船探出浪头，男孩提着微光灯笼启程。"
+      },
+      {
+        id: 2,
+        title: "② 孤夜",
+        start: 3.6,
+        end: 5.7,
+        lyric: "孤单的黑夜途中",
+        desc: "镜头广角拉远，深蓝苍穹间厚重乌云移来半遮明月；灯笼依重拍有节奏地明暗呼吸，繁星按半拍微闪。"
+      },
+      {
+        id: 3,
+        title: "③ 想着你",
+        start: 5.7,
+        end: 7.4,
+        lyric: "只要想着你",
+        desc: "右景男孩特写，头顶逐拍冒出多边形折纸「念想泡泡」，里面映出她的优雅侧影，整幅夜色由冷蓝温润过渡至暮色微醺。"
+      },
+      {
+        id: 4,
+        title: "④ 不惶恐",
+        start: 7.4,
+        end: 10.4,
+        lyric: "我就不会惶恐",
+        desc: "全片最燃卡点！巨浪立起优美陡峭的弧线，小船冲上浪巅；约9.5秒重拍瞬间，一头深蓝巨鲸腾空跃过海面！"
+      },
+      {
+        id: 5,
+        title: "⑤ 人来人往",
+        start: 10.4,
+        end: 13.8,
+        lyric: "时光的岸上人来了又走",
+        desc: "粉紫晚霞映照双层码头步道，各色身着风衣斗笠的剪纸行人剪影，一左一右交错往来，每拍更换步伐节奏。"
+      },
+      {
+        id: 6,
+        title: "⑥ 离开",
+        start: 13.8,
+        end: 17.3,
+        lyric: "离开时你不用说我都懂",
+        desc: "舞台剧幕布式切分！左侧栈桥上伊人挥手道别，右侧小船在深海飘向远方，两半纸板在重拍向左右裂开渐行渐远。"
+      },
+      {
+        id: 7,
+        title: "⑦ 感谢",
+        start: 17.3,
+        end: 20.2,
+        lyric: "感谢你曾让我",
+        desc: "镜头向上缓缓仰移，满天金色孔明灯自层叠纸浪后依半拍舒缓升起，温润金辉浸染夜空。"
+      },
+      {
+        id: 8,
+        title: "⑧ 你眼中",
+        start: 20.2,
+        end: 22.4,
+        lyric: "留在你眼中",
+        desc: "黑色宣纸剪出一只巨大的杏仁眼眸！镜头向瞳仁深处极速推进，里面映出两人同乘小舟、秉烛对坐的温馨倒影。"
+      },
+      {
+        id: 9,
+        title: "⑨ 尾声",
+        start: 22.4,
+        end: 24.1,
+        lyric: "",
+        desc: "纸浪一层层静谧归位落下，小船迎着圆月缓缓驶入中央光华，天地渐隐于温柔的暗夜之中。"
+      }
+    ];
+
+    const TOTAL_DURATION = 24.10;
+
+    // DOM 元素获取
+    const audio = document.getElementById("bgmAudio");
+    const refVideo = document.getElementById("reference-video");
+    const sceneRoot = document.getElementById("scene-root");
+    const lyricText = document.getElementById("lyric-text");
+    const progressFill = document.getElementById("progressFill");
+    const progressContainer = document.getElementById("progressContainer");
+    const shotMarkers = document.getElementById("shotMarkers");
+    const curTimeLabel = document.getElementById("curTime");
+    const playPauseBtn = document.getElementById("playPauseBtn");
+    const playIcon = document.getElementById("playIcon");
+    const restartBtn = document.getElementById("restartBtn");
+    const compareToggleBtn = document.getElementById("compareToggleBtn");
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+    const playOverlay = document.getElementById("playOverlay");
+    const shotsNav = document.getElementById("shotsNav");
+    const shotDesc = document.getElementById("shotDescription");
+
+    let isPlaying = false;
+    let compareMode = false;
+    let currentShotIdx = 0;
+
+    // 随机星空点位池（预先计算，避免每帧开销）
+    const STARS = [];
+    for (let i = 0; i < 70; i++) {
+      STARS.push({
+        x: Math.random() * 1024,
+        y: Math.random() * 320,
+        r: Math.random() * 1.6 + 0.6,
+        phase: Math.random() * Math.PI * 2,
+        speed: Math.random() * 2 + 1
+      });
+    }
+
+    // 初始化进度条标记与快捷按钮
+    function initUI() {
+      // 进度条标记
+      shotMarkers.innerHTML = "";
+      shotsNav.innerHTML = "";
+
+      SHOTS.forEach((shot, idx) => {
+        const mark = document.createElement("div");
+        mark.className = "shot-mark";
+        mark.style.left = `${(shot.start / TOTAL_DURATION) * 100}%`;
+        shotMarkers.appendChild(mark);
+
+        const btn = document.createElement("button");
+        btn.className = `shot-nav-btn ${idx === 0 ? "active" : ""}`;
+        btn.innerHTML = `<span>${shot.title}</span><span class="time">${shot.start.toFixed(1)}s</span>`;
+        btn.addEventListener("click", () => {
+          seekTo(shot.start);
+        });
+        shotsNav.appendChild(btn);
+      });
+    }
+
+    // 格式化时间
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60).toString().padStart(2, "0");
+      const s = (sec % 60).toFixed(1).padStart(4, "0");
+      return `${m}:${s}`;
+    }
+
+    // 缓动函数
+    function easeOutCubic(x) {
+      return 1 - Math.pow(1 - x, 3);
+    }
+    function easeInOutQuad(x) {
+      return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+    }
+
+    // 绘制小纸船与男孩
+    function drawPaperBoat(x, y, scale = 1, lanternGlow = 1, showBoy = true, showGirl = false) {
+      return `
+        <g transform="translate(${x}, ${y}) scale(${scale})" filter="url(#paper-shadow)">
+          <!-- 船身阴影底边 -->
+          <path d="M -46 -4 C -28 22, 28 22, 46 -4 C 28 5, -28 5, -46 -4 Z" fill="#0d141e" />
+          <!-- 纸折船身正面 -->
+          <path d="M -45 -5 L -20 16 L 20 16 L 45 -5 L 12 -2 L -12 -2 Z" fill="#1b2533" stroke="rgba(255,255,255,0.12)" stroke-width="0.8" />
+          <path d="M -20 16 L 0 3 L 20 16 Z" fill="#131c28" />
+
+          ${showBoy ? `
+            <!-- 男孩剪影 -->
+            <g transform="translate(-8, -4)">
+              <!-- 身体/长袍 -->
+              <path d="M -6 0 L 6 0 L 4 -28 L -4 -28 Z" fill="#090f17" />
+              <!-- 头部 -->
+              <circle cx="0" cy="-35" r="7" fill="#090f17" />
+              <!-- 提灯手臂 -->
+              <path d="M 2 -24 L 18 -18 L 22 -6" fill="none" stroke="#090f17" stroke-width="2.5" stroke-linecap="round" />
+              <!-- 灯笼吊绳与骨架 -->
+              <line x1="22" y1="-6" x2="22" y2="0" stroke="#f4c062" stroke-width="1.2" />
+              <!-- 暖色灯笼体 -->
+              <ellipse cx="22" cy="7" rx="6" ry="8" fill="#ffb703" filter="url(#paper-shadow-soft)" />
+              <ellipse cx="22" cy="7" rx="3.5" ry="5.5" fill="#fff3b0" />
+              <!-- 径向光晕 -->
+              <circle cx="22" cy="7" r="${35 * lanternGlow}" fill="url(#lantern-radial)" opacity="${0.85 * lanternGlow}" />
+            </g>
+          ` : ""}
+
+          ${showGirl ? `
+            <!-- 女孩剪影（并肩同行） -->
+            <g transform="translate(10, -4)">
+              <path d="M -5 0 L 7 0 L 4 -26 L -3 -26 Z" fill="#0d1622" />
+              <circle cx="0.5" cy="-33" r="6.5" fill="#0d1622" />
+              <!-- 发髻 -->
+              <circle cx="4.5" cy="-36" r="3.2" fill="#0d1622" />
+            </g>
+          ` : ""}
+        </g>
+      `;
+    }
+
+    // 核心渲染循环（逐帧手绘）
+    function renderFrame(t) {
+      curTimeLabel.innerHTML = `<span>${formatTime(t)}</span>`;
+      progressFill.style.width = `${Math.min(100, (t / TOTAL_DURATION) * 100)}%`;
+
+      // 计算当前所属镜头
+      let activeIdx = SHOTS.findIndex(s => t >= s.start && t < s.end);
+      if (activeIdx === -1) activeIdx = t >= TOTAL_DURATION ? SHOTS.length - 1 : 0;
+
+      if (activeIdx !== currentShotIdx) {
+        currentShotIdx = activeIdx;
+        document.querySelectorAll(".shot-nav-btn").forEach((btn, i) => {
+          btn.classList.toggle("active", i === activeIdx);
+        });
+        shotDesc.textContent = SHOTS[activeIdx].desc;
+      }
+
+      // 更新字幕
+      lyricText.textContent = SHOTS[activeIdx].lyric;
+
+      // 依据当前时间码渲染对应镜头的 SVG 场景
+      let sceneHTML = "";
+      const shot = SHOTS[activeIdx];
+      const localT = t - shot.start;
+      const dur = shot.end - shot.start;
+      const progress = Math.min(1, Math.max(0, localT / dur));
+
+      switch (shot.id) {
+        case 1:
+          sceneHTML = renderShot1(localT, progress);
+          break;
+        case 2:
+          sceneHTML = renderShot2(localT, progress);
+          break;
+        case 3:
+          sceneHTML = renderShot3(localT, progress);
+          break;
+        case 4:
+          sceneHTML = renderShot4(localT, progress);
+          break;
+        case 5:
+          sceneHTML = renderShot5(localT, progress);
+          break;
+        case 6:
+          sceneHTML = renderShot6(localT, progress);
+          break;
+        case 7:
+          sceneHTML = renderShot7(localT, progress);
+          break;
+        case 8:
+          sceneHTML = renderShot8(localT, progress);
+          break;
+        case 9:
+          sceneHTML = renderShot9(localT, progress);
+          break;
+      }
+
+      sceneRoot.innerHTML = sceneHTML;
+    }
+
+    // ==========================================
+    // 镜头 1：启航 (0.0s – 3.6s)
+    // 6 层波浪逐拍自底升起，第 7 拍小纸船冒头
+    // ==========================================
+    function renderShot1(localT, p) {
+      // 星空
+      let starsSVG = STARS.map(s => {
+        const op = 0.3 + 0.7 * Math.abs(Math.sin(localT * s.speed + s.phase));
+        return `<circle cx="${s.x}" cy="${s.y}" r="${s.r}" fill="#fff" opacity="${op}" />`;
+      }).join("");
+
+      // 月亮
+      const moon = `
+        <g transform="translate(770, 135)" filter="url(#paper-shadow)">
+          <circle cx="0" cy="0" r="74" fill="rgba(255, 244, 214, 0.18)" filter="url(#moon-glow)" />
+          <circle cx="0" cy="0" r="72" fill="#fff7dd" />
+          <!-- 剪纸月斑纹理 -->
+          <circle cx="-16" cy="-14" r="16" fill="#f0e2be" opacity="0.65" />
+          <circle cx="22" cy="18" r="10" fill="#f0e2be" opacity="0.55" />
+          <circle cx="-18" cy="24" r="8" fill="#f0e2be" opacity="0.5" />
+        </g>
+      `;
+
+      // 6 层剪纸波浪逐拍升起 (每拍约 0.45s)
+      const waveColors = ["#0c1b2c", "#10253c", "#16314f", "#1e4065", "#27517c", "#33669a"];
+      const wavePaths = [
+        "M 0 576 L 0 460 Q 256 420 512 455 T 1024 450 L 1024 576 Z",
+        "M 0 576 L 0 475 Q 260 445 520 480 T 1024 465 L 1024 576 Z",
+        "M 0 576 L 0 490 Q 240 465 490 495 T 1024 485 L 1024 576 Z",
+        "M 0 576 L 0 510 Q 280 485 540 515 T 1024 505 L 1024 576 Z",
+        "M 0 576 L 0 530 Q 250 505 500 535 T 1024 520 L 1024 576 Z",
+        "M 0 576 L 0 545 Q 270 525 530 550 T 1024 540 L 1024 576 Z"
+      ];
+
+      let wavesSVG = "";
+      for (let i = 0; i < 6; i++) {
+        const beatTime = i * 0.42;
+        let lift = 0;
+        if (localT > beatTime) {
+          const riseProgress = Math.min(1, (localT - beatTime) / 0.35);
+          lift = easeOutCubic(riseProgress) * 35;
+        }
+        wavesSVG += `
+          <g transform="translate(0, -${lift})" filter="url(#paper-shadow)">
+            <path d="${wavePaths[i]}" fill="${waveColors[i]}" stroke="rgba(255,255,255,0.08)" stroke-width="1.2" />
+          </g>
+        `;
+      }
+
+      // 小船在第7拍（~2.5s）冒头
+      let boatSVG = "";
+      if (localT > 2.0) {
+        const boatRise = Math.min(1, (localT - 2.0) / 0.8);
+        const boatY = 510 - easeOutCubic(boatRise) * 55 + Math.sin(localT * 3) * 3;
+        const boatTilt = Math.sin(localT * 2.5) * 3;
+        boatSVG = `
+          <g transform="rotate(${boatTilt}, 512, ${boatY})">
+            ${drawPaperBoat(512, boatY, 1.05, 1.0, true, false)}
+          </g>
+        `;
+      }
+
+      return `
+        <rect width="1024" height="576" fill="url(#night-sky)" />
+        ${starsSVG}
+        ${moon}
+        ${wavesSVG}
+        ${boatSVG}
+      `;
+    }
+
+    // ==========================================
+    // 镜头 2：孤夜 (3.6s – 5.7s)
+    // 广角拉远、乌云遮月、灯笼每拍呼吸发光
+    // ==========================================
+    function renderShot2(localT, p) {
+      // 镜头缩放
+      const scale = 1.0 - p * 0.08;
+      // 乌云滑入
+      const cloudX = -200 + p * 380;
+      // 灯笼呼吸 (周期约 0.6s)
+      const lanternBreath = 0.7 + 0.65 * Math.pow(Math.sin(localT * Math.PI * 2.2), 2);
+
+      const stars = STARS.map(s => {
+        // 半拍闪烁
+        const blink = Math.sin(localT * Math.PI * 4 + s.phase) > 0 ? 0.85 : 0.2;
+        return `<circle cx="${s.x}" cy="${s.y}" r="${s.r * 0.9}" fill="#fff" opacity="${blink}" />`;
+      }).join("");
+
+      return `
+        <g transform="translate(${512 * (1 - scale)}, ${288 * (1 - scale)}) scale(${scale})">
+          <rect width="1024" height="576" fill="url(#night-sky)" />
+          ${stars}
+
+          <!-- 月亮（渐渐被乌云半掩） -->
+          <g transform="translate(730, 140)" filter="url(#paper-shadow)">
+            <circle cx="0" cy="0" r="68" fill="#fff7dd" opacity="0.75" />
+            <circle cx="-14" cy="-12" r="14" fill="#eddcb7" opacity="0.6" />
+          </g>
+
+          <!-- 厚重剪纸乌云层 -->
+          <g filter="url(#paper-shadow)">
+            <path d="M ${cloudX - 80} 90 Q ${cloudX + 120} 50 ${cloudX + 320} 95 Q ${cloudX + 520} 60 ${cloudX + 720} 110 Q ${cloudX + 500} 160 ${cloudX + 240} 150 Z" fill="#131b28" opacity="0.95" />
+            <path d="M ${cloudX - 40} 120 Q ${cloudX + 180} 80 ${cloudX + 380} 130 Q ${cloudX + 580} 90 ${cloudX + 780} 140 L ${cloudX + 800} 220 L ${cloudX - 100} 220 Z" fill="#101722" opacity="0.88" />
+          </g>
+
+          <!-- 广阔深海波浪 -->
+          <g filter="url(#paper-shadow)">
+            <path d="M 0 576 L 0 460 Q 300 440 600 465 T 1024 455 L 1024 576 Z" fill="#0b1724" />
+            <path d="M 0 576 L 0 485 Q 260 470 540 495 T 1024 480 L 1024 576 Z" fill="#0e1d2e" />
+            <path d="M 0 576 L 0 515 Q 280 495 560 520 T 1024 505 L 1024 576 Z" fill="#13263a" />
+          </g>
+
+          <!-- 孤单小船，在无垠大海中只有一点微光 -->
+          <g transform="translate(512, ${475 + Math.sin(localT * 3) * 4})">
+            ${drawPaperBoat(0, 0, 0.78, lanternBreath, true, false)}
+          </g>
+        </g>
+      `;
+    }
+
+    // ==========================================
+    // 镜头 3：想着你 (5.7s – 7.4s)
+    // 男孩特写剪影在右前，念想泡泡逐拍放大，冷暖色温渐变
+    // ==========================================
+    function renderShot3(localT, p) {
+      // 念想泡泡按拍递增 (0~0.5s: 0.5, 0.5~1.1s: 0.75, 1.1s+: 1.0)
+      let bubbleScale = 0.45;
+      if (localT > 0.5) bubbleScale = 0.75;
+      if (localT > 1.1) bubbleScale = 1.0;
+      const smoothScale = bubbleScale + Math.sin(localT * 5) * 0.03;
+
+      // 泡泡位置
+      const bx = 380;
+      const by = 210;
+
+      return `
+        <!-- 背景：冷暖过渡渐变 -->
+        <rect width="1024" height="576" fill="url(#warm-night-sky)" />
+
+        <!-- 柔和星芒 -->
+        ${STARS.slice(0, 35).map(s => `<circle cx="${s.x}" cy="${s.y}" r="${s.r * 0.8}" fill="#fce4d6" opacity="0.4" />`).join("")}
+
+        <!-- 念想泡泡联结小珠 -->
+        <circle cx="560" cy="310" r="7" fill="#eddcb7" opacity="0.6" filter="url(#paper-shadow-soft)" />
+        <circle cx="500" cy="270" r="12" fill="#eddcb7" opacity="0.7" filter="url(#paper-shadow-soft)" />
+
+        <!-- 大折纸念想泡泡 -->
+        <g transform="translate(${bx}, ${by}) scale(${smoothScale})" filter="url(#paper-shadow)">
+          <!-- 羊皮纸温润底色 -->
+          <polygon points="0,-110 78,-78 110,0 78,78 0,110 -78,78 -110,0 -78,-78" fill="#e2ce9f" stroke="#cbb27c" stroke-width="2" />
+          <polygon points="0,-98 70,-70 98,0 70,70 0,98 -70,70 -98,0 -70,-70" fill="#eddcb7" />
+
+          <!-- 泡泡内：女孩剪影 -->
+          <g transform="translate(0, 45) scale(1.35)">
+            <path d="M -16 10 C -18 -15 -10 -35 0 -40 C 10 -35 18 -15 16 10 Z" fill="#2d211a" />
+            <circle cx="0" cy="-45" r="14" fill="#2d211a" />
+            <!-- 发髻 -->
+            <circle cx="8" cy="-52" r="7.5" fill="#2d211a" />
+            <!-- 步摇发簪点缀 -->
+            <line x1="8" y1="-50" x2="16" y2="-45" stroke="#f4c062" stroke-width="1.8" />
+          </g>
+        </g>
+
+        <!-- 右前景：特写男孩半身背影与提灯 -->
+        <g transform="translate(680, 360)" filter="url(#paper-shadow)">
+          <!-- 身体特写 -->
+          <path d="M -50 216 L 90 216 L 70 80 C 60 20 -10 15 -35 70 Z" fill="#090f18" />
+          <!-- 头部特写 -->
+          <circle cx="20" cy="40" r="32" fill="#090f18" />
+          <!-- 提灯手部 -->
+          <path d="M -30 110 L -65 140" stroke="#090f18" stroke-width="14" stroke-linecap="round" />
+          <!-- 灯笼 -->
+          <g transform="translate(-85, 160)">
+            <line x1="0" y1="-15" x2="0" y2="0" stroke="#f4c062" stroke-width="2.5" />
+            <ellipse cx="0" cy="18" rx="16" ry="22" fill="#ffb703" />
+            <ellipse cx="0" cy="18" rx="9" ry="14" fill="#fff5cc" />
+            <circle cx="0" cy="18" r="90" fill="url(#lantern-radial)" opacity="0.9" />
+          </g>
+        </g>
+      `;
+    }
+
+    // ==========================================
+    // 镜头 4：不惶恐 (7.4s – 10.4s)
+    // 巨浪立起、小船冲顶、重拍(~9.5s)跃起巨鲸
+    // ==========================================
+    function renderShot4(localT, p) {
+      // 月亮重现
+      const moon = `
+        <g transform="translate(200, 120)" filter="url(#paper-shadow)">
+          <circle cx="0" cy="0" r="64" fill="#fff7dd" />
+          <circle cx="-12" cy="-10" r="12" fill="#f0e2be" opacity="0.6" />
+        </g>
+      `;
+
+      // 巨浪陡峭弧线
+      const waveArch = `
+        <g filter="url(#paper-shadow)">
+          <!-- 大浪底色 -->
+          <path d="M 0 576 L 0 540 Q 320 480 620 280 Q 780 180 1024 240 L 1024 576 Z" fill="#0e2338" />
+          <!-- 浪脊白亮折纸线 -->
+          <path d="M 0 540 Q 320 480 620 280 Q 780 180 1024 240" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="3.5" />
+          <!-- 浪花气泡 -->
+          <circle cx="620" cy="285" r="4" fill="#fff" opacity="0.8" />
+          <circle cx="640" cy="295" r="3" fill="#fff" opacity="0.7" />
+          <circle cx="610" cy="305" r="3" fill="#fff" opacity="0.6" />
+        </g>
+      `;
+
+      // 小船随巨浪冲上巅峰
+      const boatProgress = Math.min(1, localT / 2.0);
+      const boatX = 260 + boatProgress * 200;
+      const boatY = 480 - easeOutCubic(boatProgress) * 160;
+      const boatAngle = -22 + boatProgress * 10;
+
+      const boat = `
+        <g transform="translate(${boatX}, ${boatY}) rotate(${boatAngle})">
+          ${drawPaperBoat(0, 0, 1.1, 1.2, true, false)}
+        </g>
+      `;
+
+      // 9.0s ~ 10.2s 间跃出海面的巨鲸 (全片最燃卡点，约在 localT=1.8s ~ 2.8s)
+      let whaleSVG = "";
+      if (localT >= 1.6 && localT <= 2.9) {
+        const whaleP = (localT - 1.6) / 1.3;
+        // 抛物线轨迹
+        const wx = 820 - whaleP * 340;
+        const wy = 360 - Math.sin(whaleP * Math.PI) * 160;
+        const wAngle = -35 + whaleP * 70;
+
+        whaleSVG = `
+          <g transform="translate(${wx}, ${wy}) rotate(${wAngle})" filter="url(#paper-shadow)">
+            <!-- 鲸鱼身形剪纸 -->
+            <path d="M -80 0 C -60 -40, 40 -35, 75 -10 C 95 -18, 105 -24, 115 -12 C 105 0, 108 12, 118 18 C 95 16, 80 8, 70 6 C 30 25, -50 30, -80 0 Z" fill="#0d1b28" stroke="rgba(255,255,255,0.18)" stroke-width="1.2" />
+            <!-- 鱼鳍 -->
+            <path d="M 0 10 L -12 36 L 10 22 Z" fill="#08101a" />
+            <circle cx="-50" cy="-6" r="3" fill="#fff" />
+            <!-- 溅起的水花折纸 -->
+            <polygon points="-85,15 -95,28 -82,24" fill="#bde0fe" opacity="0.8" />
+            <polygon points="-75,20 -82,34 -70,28" fill="#bde0fe" opacity="0.8" />
+          </g>
+        `;
+      }
+
+      return `
+        <rect width="1024" height="576" fill="url(#night-sky)" />
+        ${STARS.map(s => `<circle cx="${s.x}" cy="${s.y}" r="${s.r}" fill="#fff" opacity="0.5" />`).join("")}
+        ${moon}
+        ${waveArch}
+        ${boat}
+        ${whaleSVG}
+      `;
+    }
+
+    // ==========================================
+    // 镜头 5：人来人往 (10.4s – 13.8s)
+    // 粉色黄昏码头，多层路人剪影交错而过
+    // ==========================================
+    function renderShot5(localT, p) {
+      // 太阳/月亮沉于粉霞
+      const sun = `
+        <circle cx="210" cy="180" r="54" fill="#ffea9f" opacity="0.85" filter="url(#moon-glow)" />
+      `;
+
+      // 双层栈桥
+      const pier = `
+        <g filter="url(#paper-shadow)">
+          <!-- 上层步道横梁 -->
+          <rect x="0" y="390" width="1024" height="12" fill="#321626" />
+          <line x1="0" y1="382" x2="1024" y2="382" stroke="#482137" stroke-width="2.5" />
+
+          <!-- 下层步道横梁与桥墩 -->
+          <rect x="0" y="475" width="1024" height="16" fill="#200d17" />
+          ${[80, 240, 400, 560, 720, 880].map(x => `<rect x="${x}" y="475" width="14" height="101" fill="#15080f" />`).join("")}
+        </g>
+      `;
+
+      // 行人模型库
+      function pedestrian(x, y, dir = 1, type = 0) {
+        return `
+          <g transform="translate(${x}, ${y}) scale(${dir * 0.9}, 0.9)" filter="url(#paper-shadow-soft)">
+            <!-- 躯干外套 -->
+            <path d="M -8 0 L 8 0 L 5 -34 L -5 -34 Z" fill="#180b14" />
+            <!-- 头与帽子 -->
+            <circle cx="0" cy="-42" r="7.5" fill="#180b14" />
+            ${type === 1 ? `<polygon points="-14,-46 0,-56 14,-46" fill="#26101f" />` : ""}
+            ${type === 2 ? `<line x1="6" y1="-20" x2="14" y2="0" stroke="#180b14" stroke-width="2" />` : ""}
+          </g>
+        `;
+      }
+
+      // 上下层双向交错移动的人流
+      let crowdSVG = "";
+      // 上层人流：从左往右走
+      for (let i = 0; i < 7; i++) {
+        const speed = 70;
+        const initialX = -100 + i * 180;
+        const curX = (initialX + localT * speed) % 1150 - 50;
+        crowdSVG += pedestrian(curX, 390, 1, i % 3);
+      }
+      // 下层人流：从右往左走
+      for (let j = 0; j < 6; j++) {
+        const speed = 60;
+        const initialX = 1100 - j * 200;
+        const curX = 1150 - ((1150 - initialX + localT * speed) % 1200);
+        crowdSVG += pedestrian(curX, 475, -1, (j + 1) % 3);
+      }
+
+      return `
+        <rect width="1024" height="576" fill="url(#sunset-sky)" />
+        ${sun}
+        ${crowdSVG}
+        ${pier}
+      `;
+    }
+
+    // ==========================================
+    // 镜头 6：离开 (13.8s – 17.3s)
+    // 幕布式对开分离，伊人码头挥手，小船远去
+    // ==========================================
+    function renderShot6(localT, p) {
+      // 重拍后（约1.0s），纸板向两侧裂开
+      let splitOffset = 0;
+      if (localT > 0.8) {
+        splitOffset = easeOutCubic((localT - 0.8) / 2.2) * 110;
+      }
+
+      return `
+        <!-- 深邃黑底 -->
+        <rect width="1024" height="576" fill="#04060a" />
+
+        <!-- 左半幅幕布：栈桥与挥手的女孩 -->
+        <g transform="translate(-${splitOffset}, 0)">
+          <clipPath id="left-clip">
+            <rect x="0" y="0" width="512" height="576" />
+          </clipPath>
+          <g clip-path="url(#left-clip)">
+            <rect width="1024" height="576" fill="#442636" />
+            <!-- 码头边缘 -->
+            <rect x="0" y="440" width="512" height="136" fill="#1f111a" filter="url(#paper-shadow)" />
+            <line x1="0" y1="440" x2="512" y2="440" stroke="#311929" stroke-width="4" />
+            ${[90, 220, 350, 480].map(x => `<rect x="${x}" y="440" width="16" height="136" fill="#130910" />`).join("")}
+
+            <!-- 伫立在码头挥手的女孩 -->
+            <g transform="translate(380, 440)" filter="url(#paper-shadow)">
+              <path d="M -10 0 L 12 0 L 7 -48 L -7 -48 Z" fill="#0b080f" />
+              <circle cx="0" cy="-58" r="10" fill="#0b080f" />
+              <circle cx="-6" cy="-63" r="5" fill="#0b080f" />
+              <!-- 挥起的手臂（轻微摆动） -->
+              <path d="M 5 -40 L 22 -62 L 26 -76" stroke="#0b080f" stroke-width="3" stroke-linecap="round" />
+            </g>
+          </g>
+        </g>
+
+        <!-- 右半幅幕布：夜海与渐行渐远的小纸船 -->
+        <g transform="translate(${splitOffset}, 0)">
+          <clipPath id="right-clip">
+            <rect x="512" y="0" width="512" height="576" />
+          </clipPath>
+          <g clip-path="url(#right-clip)">
+            <rect width="1024" height="576" fill="#1c2738" />
+            <path d="M 512 470 Q 750 440 1024 465 L 1024 576 L 512 576 Z" fill="#0d1824" filter="url(#paper-shadow)" />
+
+            <!-- 男孩与小船往右漂离 -->
+            <g transform="translate(${720 + splitOffset * 0.4}, 470)">
+              ${drawPaperBoat(0, 0, 0.95, 1.0, true, false)}
+            </g>
+          </g>
+        </g>
+
+        <!-- 中间裂痕边缘的纸张阴影线 -->
+        <line x1="${512 - splitOffset}" y1="0" x2="${512 - splitOffset}" y2="576" stroke="rgba(0,0,0,0.6)" stroke-width="4" />
+        <line x1="${512 + splitOffset}" y1="0" x2="${512 + splitOffset}" y2="576" stroke="rgba(0,0,0,0.6)" stroke-width="4" />
+      `;
+    }
+
+    // ==========================================
+    // 镜头 7：感谢 (17.3s – 20.2s)
+    // 满天金色孔明灯自层层纸浪后升起，镜头向上摇
+    // ==========================================
+    function renderShot7(localT, p) {
+      // 镜头向上摇仰角移动
+      const cameraPanY = p * 60;
+
+      // 14 盏孔明灯数据（分布在高、中、低空，错落有致）
+      const lanterns = [
+        { x: 180, speed: 95, initialY: 380, scale: 0.85 },
+        { x: 320, speed: 110, initialY: 480, scale: 1.15 },
+        { x: 480, speed: 100, initialY: 340, scale: 1.35 },
+        { x: 620, speed: 115, initialY: 420, scale: 0.95 },
+        { x: 790, speed: 105, initialY: 360, scale: 1.1 },
+        { x: 910, speed: 90, initialY: 460, scale: 0.8 },
+        { x: 250, speed: 120, initialY: 500, scale: 0.9 },
+        { x: 410, speed: 102, initialY: 440, scale: 1.05 },
+        { x: 710, speed: 112, initialY: 480, scale: 1.0 },
+        { x: 550, speed: 98, initialY: 390, scale: 1.2 },
+        { x: 140, speed: 85, initialY: 420, scale: 0.75 },
+        { x: 860, speed: 108, initialY: 380, scale: 0.9 }
+      ];
+
+      let lanternsSVG = lanterns.map(l => {
+        const ly = l.initialY - localT * l.speed;
+        const lx = l.x + Math.sin(localT * 2 + l.x) * 14;
+
+        return `
+          <g transform="translate(${lx}, ${ly}) scale(${l.scale})" filter="url(#lantern-glow)">
+            <!-- 暖金外壳 -->
+            <polygon points="-12,-18 12,-18 16,14 -16,14" fill="#ffb703" />
+            <polygon points="-9,-14 9,-14 12,11 -12,11" fill="#fff2b2" />
+            <!-- 光心 -->
+            <ellipse cx="0" cy="5" rx="5" ry="4" fill="#fff" />
+            <!-- 柔和外光晕 -->
+            <circle cx="0" cy="0" r="32" fill="url(#lantern-radial)" opacity="0.75" />
+          </g>
+        `;
+      }).join("");
+
+      return `
+        <g transform="translate(0, ${cameraPanY})">
+          <rect width="1024" height="650" y="-74" fill="url(#amber-sky)" />
+
+          <!-- 金夜星点 -->
+          ${STARS.map(s => `<circle cx="${s.x}" cy="${s.y - 40}" r="${s.r}" fill="#ffe8b8" opacity="0.5" />`).join("")}
+
+          <!-- 孔明灯冉冉升起 -->
+          ${lanternsSVG}
+
+          <!-- 底层剪纸波浪 -->
+          <g filter="url(#paper-shadow)">
+            <path d="M 0 576 L 0 490 Q 256 460 512 490 T 1024 475 L 1024 576 Z" fill="#2d1708" />
+            <path d="M 0 576 L 0 520 Q 260 495 520 525 T 1024 510 L 1024 576 Z" fill="#1b0e04" />
+          </g>
+
+          <!-- 提灯男孩瞻望漫天明灯 -->
+          <g transform="translate(490, 500)">
+            ${drawPaperBoat(0, 0, 1.0, 1.3, true, false)}
+          </g>
+        </g>
+      `;
+    }
+
+    // ==========================================
+    // 镜头 8：你眼中 (20.2s – 22.4s)
+    // 巨型眼眸杏仁遮罩，推进看到两人并肩乘舟
+    // ==========================================
+    function renderShot8(localT, p) {
+      // 推进镜头 Scale: 1.0 -> 1.7
+      const zoom = 1.0 + easeInOutQuad(p) * 0.7;
+
+      return `
+        <!-- 黑色宣纸画框底色 -->
+        <rect width="1024" height="576" fill="#05070a" />
+
+        <!-- 眼眸视窗内部景象 -->
+        <g clip-path="url(#eye-clip)">
+          <g transform="translate(${512 * (1 - zoom)}, ${288 * (1 - zoom)}) scale(${zoom})">
+            <!-- 眸中倒影的温润金黄苍穹 -->
+            <rect width="1024" height="576" fill="url(#amber-sky)" />
+
+            <!-- 眸中圆月 -->
+            <g transform="translate(640, 200)" filter="url(#moon-glow)">
+              <circle cx="0" cy="0" r="54" fill="#fff4cc" />
+              <circle cx="-10" cy="-8" r="9" fill="#e8d39e" opacity="0.6" />
+            </g>
+
+            <!-- 眸中静谧微波 -->
+            <path d="M 0 576 L 0 380 Q 256 360 512 380 T 1024 370 L 1024 576 Z" fill="#321a08" filter="url(#paper-shadow)" />
+
+            <!-- 两人终于同坐在小船上，共享一盏灯 -->
+            <g transform="translate(480, 375)">
+              ${drawPaperBoat(0, 0, 1.25, 1.4, true, true)}
+            </g>
+          </g>
+        </g>
+
+        <!-- 眼眸杏仁边框剪纸金箔描边 -->
+        <path d="M 80 288 Q 512 110 944 288 Q 512 466 80 288 Z" fill="none" stroke="#d4a359" stroke-width="2.5" opacity="0.6" filter="url(#paper-shadow)" />
+      `;
+    }
+
+    // ==========================================
+    // 镜头 9：尾声 (22.4s – 24.1s)
+    // 纸浪层层落下，小船驶入圆月，淡出暗夜
+    // ==========================================
+    function renderShot9(localT, p) {
+      // 波浪逐层下沉
+      const sink = easeInOutQuad(p) * 80;
+      // 整体淡出
+      const fadeOut = Math.max(0, 1 - Math.max(0, (localT - 0.7) / 1.0));
+
+      // 小船驶向远方圆月中央
+      const boatProgress = Math.min(1, localT / 1.7);
+      const boatX = 512;
+      const boatY = 460 - boatProgress * 80;
+      const boatScale = 0.9 - boatProgress * 0.45;
+
+      return `
+        <g opacity="${fadeOut}">
+          <rect width="1024" height="576" fill="url(#night-sky)" />
+
+          <!-- 静谧星夜 -->
+          ${STARS.map(s => `<circle cx="${s.x}" cy="${s.y}" r="${s.r}" fill="#fff" opacity="${0.6 * (1 - p * 0.5)}" />`).join("")}
+
+          <!-- 皎洁圆月居中 -->
+          <g transform="translate(512, 220)" filter="url(#paper-shadow)">
+            <circle cx="0" cy="0" r="78" fill="#fff7dd" filter="url(#moon-glow)" />
+            <circle cx="-16" cy="-14" r="14" fill="#ede0bf" opacity="0.6" />
+          </g>
+
+          <!-- 缓缓回落的剪纸海浪 -->
+          <g transform="translate(0, ${sink})" filter="url(#paper-shadow)">
+            <path d="M 0 576 L 0 490 Q 256 465 512 490 T 1024 475 L 1024 576 Z" fill="#0d1d2d" />
+            <path d="M 0 576 L 0 525 Q 260 500 520 530 T 1024 515 L 1024 576 Z" fill="#071018" />
+          </g>
+
+          <!-- 小船驶入月光怀抱中 -->
+          <g transform="translate(${boatX}, ${boatY})">
+            ${drawPaperBoat(0, 0, boatScale, 1.0, true, false)}
+          </g>
+        </g>
+      `;
+    }
+
+    // 播放/暂停控制
+    function togglePlay() {
+      if (audio.paused) {
+        audio.play().then(() => {
+          isPlaying = true;
+          playIcon.textContent = "⏸ 暂停";
+          playOverlay.classList.add("hidden");
+          if (compareMode) refVideo.play();
+        }).catch(err => console.log("Play blocked", err));
+      } else {
+        audio.pause();
+        isPlaying = false;
+        playIcon.textContent = "▶ 播放";
+        if (compareMode) refVideo.pause();
+      }
+    }
+
+    // 拖动跳转
+    function seekTo(targetTime) {
+      const t = Math.max(0, Math.min(TOTAL_DURATION, targetTime));
+      audio.currentTime = t;
+      if (compareMode) refVideo.currentTime = t;
+      renderFrame(t);
+    }
+
+    // 事件绑定
+    playPauseBtn.addEventListener("click", togglePlay);
+    playOverlay.addEventListener("click", togglePlay);
+
+    restartBtn.addEventListener("click", () => {
+      seekTo(0);
+      if (audio.paused) togglePlay();
+    });
+
+    // 进度条拖动交互
+    let isDragging = false;
+    function handleProgressClick(e) {
+      const rect = progressContainer.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const targetTime = (clickX / rect.width) * TOTAL_DURATION;
+      seekTo(targetTime);
+    }
+
+    progressContainer.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      handleProgressClick(e);
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (isDragging) handleProgressClick(e);
+    });
+
+    window.addEventListener("mouseup", () => {
+      isDragging = false;
+    });
+
+    // 对照原版视频切换
+    compareToggleBtn.addEventListener("click", () => {
+      compareMode = !compareMode;
+      refVideo.classList.toggle("show", compareMode);
+      compareToggleBtn.classList.toggle("active", compareMode);
+      if (compareMode) {
+        refVideo.currentTime = audio.currentTime;
+        if (!audio.paused) refVideo.play();
+      } else {
+        refVideo.pause();
+      }
+    });
+
+    // 全屏切换
+    fullscreenBtn.addEventListener("click", () => {
+      const container = document.getElementById("stageContainer");
+      if (!document.fullscreenElement) {
+        container.requestFullscreen?.() || container.webkitRequestFullscreen?.();
+      } else {
+        document.exitFullscreen?.();
+      }
+    });
+
+    // 逐帧同步监听
+    audio.addEventListener("timeupdate", () => {
+      if (!isDragging) {
+        renderFrame(audio.currentTime);
+      }
+    });
+
+    audio.addEventListener("ended", () => {
+      isPlaying = false;
+      playIcon.textContent = "▶ 播放";
+      playOverlay.classList.remove("hidden");
+      if (compareMode) refVideo.pause();
+    });
+
+    // 页面初始化
+    initUI();
+    
+    // 支持 URL 参数 ?t=秒数 直接预览指定时间帧（便于截图或自动化导出）
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("t")) {
+      const targetT = parseFloat(urlParams.get("t"));
+      playOverlay.classList.add("hidden");
+      seekTo(targetT);
+    } else {
+      renderFrame(0);
+    }
+  </script>
+</body>
+</html>
