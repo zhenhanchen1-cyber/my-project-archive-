@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>DJI Osmo Action 4 · 3D 交互式工程拆解可视化</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070a10;
+      --panel-bg: rgba(11, 16, 26, 0.82);
+      --panel-border: rgba(0, 229, 255, 0.22);
+      --panel-border-hover: rgba(0, 229, 255, 0.6);
+      --cyan-glow: #00e5ff;
+      --cyan-dim: rgba(0, 229, 255, 0.15);
+      --amber-accent: #ff9100;
+      --text-main: #f0f4fc;
+      --text-muted: #8292ab;
+      --font-display: 'Orbitron', -apple-system, sans-serif;
+      --font-tech: 'Rajdhani', -apple-system, sans-serif;
+      --font-body: 'Noto Sans SC', -apple-system, sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: block;
+    }
+
+    /* 顶部标题栏 */
+    header {
+      position: absolute;
+      top: 20px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      pointer-events: auto;
+    }
+
+    .dji-logo-badge {
+      background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 100, 255, 0.1));
+      border: 1px solid var(--panel-border);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 1.15rem;
+      letter-spacing: 2px;
+      color: var(--cyan-glow);
+      text-shadow: 0 0 12px rgba(0, 229, 255, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dji-logo-badge::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--cyan-glow);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--cyan-glow);
+    }
+
+    .title-text h1 {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #fff;
+    }
+
+    .title-text p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .top-stats {
+      display: flex;
+      gap: 18px;
+      pointer-events: auto;
+    }
+
+    .stat-pill {
+      background: var(--panel-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--panel-border);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-family: var(--font-tech);
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .stat-pill .label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .stat-pill .val {
+      font-weight: 700;
+      color: var(--cyan-glow);
+    }
+
+    /* 左侧部件清单面板 */
+    .left-panel {
+      position: absolute;
+      top: 88px;
+      left: 24px;
+      width: 280px;
+      max-height: calc(100vh - 190px);
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 10;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .panel-title {
+      font-family: var(--font-tech);
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--cyan-glow);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-badge {
+      font-size: 0.7rem;
+      background: rgba(0, 229, 255, 0.12);
+      color: var(--cyan-glow);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 229, 255, 0.3);
+    }
+
+    .parts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .parts-list::-webkit-scrollbar {
+      width: 4px;
+    }
+    .parts-list::-webkit-scrollbar-thumb {
+      background: rgba(0, 229, 255, 0.3);
+      border-radius: 4px;
+    }
+
+    .part-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 9px 12px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .part-item:hover {
+      background: rgba(0, 229, 255, 0.08);
+      border-color: var(--panel-border-hover);
+      transform: translateX(4px);
+    }
+
+    .part-item.active {
+      background: linear-gradient(90deg, rgba(0, 229, 255, 0.2), rgba(0, 229, 255, 0.05));
+      border-color: var(--cyan-glow);
+      box-shadow: 0 0 14px rgba(0, 229, 255, 0.3);
+    }
+
+    .part-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .part-name {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #fff;
+    }
+
+    .part-tag {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-family: var(--font-tech);
+    }
+
+    .part-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      transition: all 0.2s;
+    }
+
+    .part-item.active .part-indicator {
+      background: var(--cyan-glow);
+      box-shadow: 0 0 8px var(--cyan-glow);
+    }
+
+    /* 右侧部件详情卡片 */
+    .right-panel {
+      position: absolute;
+      top: 88px;
+      right: 24px;
+      width: 320px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 10;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    .detail-tag {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      color: var(--amber-accent);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .detail-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 2px;
+    }
+
+    .detail-desc {
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    .specs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .spec-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 8px 10px;
+      border-radius: 6px;
+    }
+
+    .spec-key {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .spec-val {
+      font-family: var(--font-tech);
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--cyan-glow);
+    }
+
+    .highlight-btn {
+      background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(0, 150, 255, 0.15));
+      border: 1px solid var(--cyan-glow);
+      color: #fff;
+      font-family: var(--font-tech);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 9px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .highlight-btn:hover {
+      background: var(--cyan-glow);
+      color: #000;
+      box-shadow: 0 0 16px var(--cyan-glow);
+    }
+
+    /* 底部控制台与拆解滑块 */
+    .bottom-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 48px);
+      max-width: 860px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 12px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 10;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .slider-label {
+      font-family: var(--font-tech);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--cyan-glow);
+      white-space: nowrap;
+    }
+
+    .custom-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, rgba(0, 229, 255, 0.6), rgba(255, 145, 0, 0.6));
+      outline: none;
+      cursor: pointer;
+    }
+
+    .custom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid var(--cyan-glow);
+      box-shadow: 0 0 10px var(--cyan-glow);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .custom-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    .slider-value {
+      font-family: var(--font-tech);
+      font-size: 0.95rem;
+      font-weight: 700;
+      min-width: 48px;
+      text-align: right;
+      color: #fff;
+    }
+
+    .actions-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .ctrl-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-main);
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-family: var(--font-tech);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(0, 229, 255, 0.12);
+      border-color: var(--cyan-glow);
+      color: var(--cyan-glow);
+    }
+
+    .ctrl-btn.active {
+      background: linear-gradient(135deg, rgba(0, 229, 255, 0.3), rgba(0, 100, 255, 0.2));
+      border-color: var(--cyan-glow);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+    }
+
+    .guide-tip {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 3D 浮动标签 (Floating Annotation) */
+    .floating-callout {
+      position: absolute;
+      pointer-events: none;
+      z-index: 5;
+      transform: translate(-50%, -100%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      transition: opacity 0.2s ease;
+    }
+
+    .callout-badge {
+      background: rgba(6, 12, 20, 0.9);
+      border: 1.5px solid var(--cyan-glow);
+      box-shadow: 0 0 16px rgba(0, 229, 255, 0.5);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-family: var(--font-tech);
+      font-weight: 700;
+      font-size: 0.82rem;
+      color: #fff;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .callout-pin {
+      width: 2px;
+      height: 24px;
+      background: linear-gradient(180deg, var(--cyan-glow), transparent);
+    }
+  </style>
+</head>
+<body>
+
+
+  <!-- WebGL 场景画布 -->
+  <canvas id="webgl-canvas"></canvas>
+
+  <!-- 3D 悬浮指示标签 -->
+  <div id="floating-callout" class="floating-callout">
+    <div class="callout-badge">
+      <span id="callout-text">1/1.3" CMOS 传感器</span>
+    </div>
+    <div class="callout-pin"></div>
+  </div>
+
+  <!-- 顶部状态栏 -->
+  <header>
+    <div class="brand-group">
+      <div class="dji-logo-badge">DJI</div>
+      <div class="title-text">
+        <h1>OSMO ACTION 4</h1>
+        <p>3D 交互式工程结构拆解系统 · PURE WEBGL CODE GENERATION</p>
+      </div>
+    </div>
+
+    <div class="top-stats">
+      <div class="stat-pill">
+        <span class="label">OPTICAL SENSOR</span>
+        <span class="val">1/1.3" CMOS f/2.8</span>
+      </div>
+      <div class="stat-pill">
+        <span class="label">WATERPROOF</span>
+        <span class="val">18M BARE METAL</span>
+      </div>
+      <div class="stat-pill">
+        <span class="label">BATTERY LIFE</span>
+        <span class="val">1770 mAh · 160 MIN</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 左侧部件清单面板 -->
+  <aside class="left-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>部件清单</span>
+        <span class="panel-badge" id="parts-count">10 PARTS</span>
+      </div>
+    </div>
+    <div class="parts-list" id="parts-list"></div>
+  </aside>
+
+  <!-- 右侧技术参数卡片 -->
+  <aside class="right-panel">
+    <div class="detail-tag" id="part-category">OPTICAL CORE</div>
+    <div class="detail-name" id="part-title">1/1.3 英寸 CMOS 传感器</div>
+    <div class="detail-desc" id="part-desc">
+      DJI Action 4 相比前代实现了画质飞跃的核心。单像素感光面积提升超 60%，配合 10-bit D-Log M 色彩模式，能在夜景和逆光下保留极宽动态范围。
+    </div>
+    <div class="specs-grid" id="part-specs">
+      <div class="spec-box"><div class="spec-key">传感器尺寸</div><div class="spec-val">1/1.3 英寸</div></div>
+      <div class="spec-box"><div class="spec-key">最高视频规格</div><div class="spec-val">4K / 120fps</div></div>
+      <div class="spec-box"><div class="spec-key">等效单像素</div><div class="spec-val">2.4 μm 融合</div></div>
+      <div class="spec-box"><div class="spec-key">色彩位深</div><div class="spec-val">10-Bit D-Log M</div></div>
+    </div>
+    <button class="highlight-btn" id="focus-btn">聚焦并单独高亮此部件</button>
+  </aside>
+
+  <!-- 底部控制面板 -->
+  <nav class="bottom-bar">
+    <div class="slider-row">
+      <span class="slider-label">拆解程度 [ EXPLODED VIEW ]</span>
+      <input type="range" min="0" max="100" value="0" class="custom-slider" id="explode-slider" />
+      <span class="slider-value" id="explode-value">0%</span>
+    </div>
+
+    <div class="actions-row">
+      <div class="btn-group">
+        <button class="ctrl-btn" id="btn-explode">⚡ 一键拆解</button>
+        <button class="ctrl-btn" id="btn-assemble">🔄 一键复原</button>
+        <button class="ctrl-btn" id="btn-xray">👁️ X光透视</button>
+        <button class="ctrl-btn" id="btn-auto-rotate">🌀 自动巡航</button>
+        <button class="ctrl-btn" id="btn-reset">🎯 重置视角</button>
+      </div>
+
+      <div class="guide-tip">
+        <span>💡 操作引导：左键拖拽旋转 · 滚轮缩放 · 右键平移 · 单击零件拆解与查看详情</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Three.js 脚本驱动 -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/build/three.module.js",
+      "three/addons/": "./vendor/three/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ==========================================
+    // 1. 部件定义与技术参数数据库
+    // ==========================================
+    const PARTS_DATA = [
+      {
+        id: 'lens_guard',
+        name: '可拆卸镜头保护圈与滤镜',
+        tag: 'OPTICAL / PROTECTION',
+        category: '光学防护组件',
+        desc: '采用高强度铝合金外环与防滑齿纹设计，内嵌 AF 防指纹疏水双面镀膜玻璃。支持免工具快拆，摔坏可秒速更换，同时支持拓展 ND 减光镜。',
+        specs: [
+          { k: '外壳材质', v: '航空级铝合金' },
+          { k: '镀膜工艺', v: 'AF疏水防污' },
+          { k: '防水能力', v: '抗压橡胶圈密封' },
+          { k: '快拆特性', v: '螺纹旋合卡扣' }
+        ],
+        explodeOffset: new THREE.Vector3(0, 0, 4.8),
+        color: 0x1f242d,
+        accent: 0xe63946
+      },
+      {
+        id: 'lens_optics',
+        name: '155° 超广角高素质镜头模组',
+        tag: 'OPTICAL GROUP',
+        category: '光学成像核心',
+        desc: '定焦 f/2.8 超广角非球面镜片组，拥有极致的 155° 宽广透视视场角，接近人眼视觉极限，可拍摄冲击力强烈的极限运动第一人称画面。',
+        specs: [
+          { k: '最大光圈', v: 'f/2.8' },
+          { k: '等效焦距', v: '12.7 mm' },
+          { k: '视场角 FOV', v: '155° 超广' },
+          { k: '对焦范围', v: '0.4 m 至无穷' }
+        ],
+        explodeOffset: new THREE.Vector3(0, 0, 3.2),
+        color: 0x181e26,
+        accent: 0x00e5ff
+      },
+      {
+        id: 'cmos_sensor',
+        name: '1/1.3 英寸 CMOS 图像传感器',
+        tag: 'CORE IMAGING',
+        category: '图像感光核心',
+        desc: 'Action 4 的核心心脏。单像素尺寸等效达 2.4μm，即便在暗光、水下或黄昏也能输出纯净少噪点的画面，原生支持 10-bit D-Log M 专业调色。',
+        specs: [
+          { k: '感光面积', v: '1/1.3 英寸' },
+          { k: '动态范围', v: '10-Bit D-Log M' },
+          { k: '等效像素', v: '2.4 μm 大像素' },
+          { k: '防抖算法', v: 'RockSteady 3.0+' }
+        ],
+        explodeOffset: new THREE.Vector3(0, 0, 1.8),
+        color: 0x221c38,
+        accent: 0xffb703
+      },
+      {
+        id: 'front_screen',
+        name: '1.4 英寸前置触控彩屏',
+        tag: 'DUAL SCREEN UI',
+        category: '自拍取景系统',
+        desc: '支持自拍实时构图与参数触控调节，无需把相机转到背面即可直接滑动设置参数，Vlog 与极限自拍神器。',
+        specs: [
+          { k: '屏幕尺寸', v: '1.4 英寸' },
+          { k: '分辨率', v: '320 × 320' },
+          { k: '像素密度', v: '326 ppi' },
+          { k: '触控支持', v: '湿手触控算法' }
+        ],
+        explodeOffset: new THREE.Vector3(-2.2, 0, 2.2),
+        color: 0x0b1018,
+        accent: 0x00e5ff
+      },
+      {
+        id: 'chassis',
+        name: '高导热镁铝合金中框骨架',
+        tag: 'MAIN CHASSIS',
+        category: '机身结构总成',
+        desc: '机身结构中枢。采用高强度压铸镁铝合金，具备优异的抗摔减震与内部热传导性能，四周覆盖亲肤耐磨防滑纹理。',
+        specs: [
+          { k: '骨架材质', v: '高强度镁铝合金' },
+          { k: '裸机防水', v: '18 米深潜' },
+          { k: '工作温度', v: '-20°C 至 45°C' },
+          { k: '机身重量', v: '145 g' }
+        ],
+        explodeOffset: new THREE.Vector3(0, 0, 0),
+        color: 0x282f3a,
+        accent: 0x00e5ff
+      },
+      {
+        id: 'mainboard',
+        name: '主控电路板与影像处理芯片',
+        tag: 'ISP & LOGIC BOARD',
+        category: '计算中枢',
+        desc: '高集成度双面堆叠 PCB 板，集成定制图像信号处理器（ISP）、六轴高精度陀螺仪加速度计（地平线校准）以及 Wi-Fi 6 高速传输芯片。',
+        specs: [
+          { k: '处理器', v: 'DJI 定制低功耗 ISP' },
+          { k: '增稳芯片', v: '6轴超敏 IMU' },
+          { k: '无线协议', v: 'Wi-Fi 6 + BLE 5.0' },
+          { k: '传输速度', v: '最高 80 MB/s' }
+        ],
+        explodeOffset: new THREE.Vector3(-1.2, 0, -1.8),
+        color: 0x143526,
+        accent: 0x52b788
+      },
+      {
+        id: 'rear_screen',
+        name: '2.25 英寸高亮触控主屏幕',
+        tag: 'MAIN DISPLAY',
+        category: '主控人机交互',
+        desc: '大尺寸后置主触控屏，采用高透大猩猩钢化玻璃覆盖，最高亮度达 750 尼特，在强烈的户外阳光直射下依然清晰可辨。',
+        specs: [
+          { k: '主屏尺寸', v: '2.25 英寸' },
+          { k: '分辨率', v: '640 × 360' },
+          { k: '最高亮度', v: '750 nits 户外级' },
+          { k: '盖板材质', v: '大猩猩强化玻璃' }
+        ],
+        explodeOffset: new THREE.Vector3(0, 0, -3.2),
+        color: 0x080d14,
+        accent: 0x00e5ff
+      },
+      {
+        id: 'battery',
+        name: '耐寒长续航 Extreme 锂电池',
+        tag: 'POWER CELL',
+        category: '动力能源单元',
+        desc: '1770mAh 高倍率耐低温电芯，即便在 -20℃ 极寒冰雪环境中仍可持续录制高达 150 分钟，并支持快速充电技术。',
+        specs: [
+          { k: '电池容量', v: '1770 mAh' },
+          { k: '额定能量', v: '6.81 Wh' },
+          { k: '耐低温', v: '-20°C 稳定运行' },
+          { k: '快充支持', v: '18分钟充至80%' }
+        ],
+        explodeOffset: new THREE.Vector3(3.6, 0, 0),
+        color: 0x3d4450,
+        accent: 0xff9100
+      },
+      {
+        id: 'battery_door',
+        name: '气密防水电池仓门与锁扣',
+        tag: 'SEALING MECHANISM',
+        category: '气密防护机构',
+        desc: '双重机械滑块保险锁设计，内嵌环形硅胶防水密封圈，防止水下或剧烈震动误开，同时防护 Type-C 接口与 MicroSD 卡槽。',
+        specs: [
+          { k: '锁止机构', v: '双向弹簧推扣' },
+          { k: '密封设计', v: '定制高弹硅胶圈' },
+          { k: '拓展接口', v: 'USB 3.0 Type-C' },
+          { k: '存储支持', v: '最高 512GB TF卡' }
+        ],
+        explodeOffset: new THREE.Vector3(5.6, 0, 0),
+        color: 0x242a35,
+        accent: 0xff9100
+      },
+      {
+        id: 'magnetic_base',
+        name: '磁吸快拆扩展底座与卡扣',
+        tag: 'MOUNTING SYSTEM',
+        category: '快拆拓展系统',
+        desc: 'DJI 标志性的强力稀土强磁与双侧弹簧机械卡扣结合设计。强磁瞬间吸附对齐，双卡扣坚固锁紧，抗冲击不脱落。',
+        specs: [
+          { k: '磁铁材质', v: '钕铁硼强磁阵列' },
+          { k: '卡扣机构', v: '双侧微动限位弹簧' },
+          { k: '兼容性', v: 'DJI 快拆 / 运动相机三脚架' },
+          { k: '抗拉强度', v: '> 150 N 极限拉力' }
+        ],
+        explodeOffset: new THREE.Vector3(0, -2.8, 0),
+        color: 0x1b202a,
+        accent: 0x00e5ff
+      }
+    ];
+
+    // ==========================================
+    // 2. 初始化 Three.js 场景与渲染器
+    // ==========================================
+    const canvas = document.getElementById('webgl-canvas');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070a10);
+    scene.fog = new THREE.FogExp2(0x070a10, 0.035);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(9, 6, 11);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 3.5;
+    controls.maxDistance = 24;
+    controls.target.set(0, 0, 0);
+
+    // ==========================================
+    // 3. 科技感光影与蓝图地面
+    // ==========================================
+    const ambientLight = new THREE.AmbientLight(0xdde8ff, 0.9);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    keyLight.position.set(8, 12, 10);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 30;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    // 科技青色边缘轮廓光
+    const cyanRim = new THREE.DirectionalLight(0x00e5ff, 2.5);
+    cyanRim.position.set(-10, 6, -8);
+    scene.add(cyanRim);
+
+    // 暖琥珀色侧辅光
+    const amberRim = new THREE.DirectionalLight(0xff9100, 1.4);
+    amberRim.position.set(6, -6, -6);
+    scene.add(amberRim);
+
+    // 科技地面网格
+    const gridHelper = new THREE.GridHelper(26, 26, 0x00e5ff, 0x1b2d45);
+    gridHelper.position.y = -3.8;
+    gridHelper.material.opacity = 0.35;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
+
+    // 悬浮环境微粒
+    const particleGeo = new THREE.BufferGeometry();
+    const particleCount = 200;
+    const posArr = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      posArr[i] = (Math.random() - 0.5) * 24;
+      posArr[i + 1] = (Math.random() - 0.5) * 16;
+      posArr[i + 2] = (Math.random() - 0.5) * 24;
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+    const particleMat = new THREE.PointsMaterial({
+      color: 0x00e5ff,
+      size: 0.08,
+      transparent: true,
+      opacity: 0.4
+    });
+    const particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
+
+    // ==========================================
+    // 4. 纯代码程序化纹理生成（CanvasTexture）
+    // ==========================================
+    function createScreenTexture(isFront = false) {
+      const cv = document.createElement('canvas');
+      cv.width = 512;
+      cv.height = isFront ? 512 : 288;
+      const ctx = cv.getContext('2d');
+
+      // 屏幕背景
+      ctx.fillStyle = '#0a1017';
+      ctx.fillRect(0, 0, cv.width, cv.height);
+
+      // 实时取景画面模拟（微光渐变）
+      const grad = ctx.createLinearGradient(0, 0, cv.width, cv.height);
+      grad.addColorStop(0, '#12253a');
+      grad.addColorStop(1, '#08131e');
+      ctx.fillStyle = grad;
+      ctx.fillRect(16, 16, cv.width - 32, cv.height - 32);
+
+      // 地平线水平仪线
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cv.width * 0.3, cv.height * 0.5);
+      ctx.lineTo(cv.width * 0.7, cv.height * 0.5);
+      ctx.stroke();
+
+      // UI 科技文字与参数
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = 'bold 22px Rajdhani, monospace';
+      ctx.fillText('4K / 120 FPS', 32, 52);
+
+      ctx.fillStyle = '#ff9100';
+      ctx.font = 'bold 20px Rajdhani, monospace';
+      ctx.fillText('10-BIT D-LOG M', 32, 82);
+
+      // 录制指示红点与时间
+      ctx.fillStyle = '#e63946';
+      ctx.beginPath();
+      ctx.arc(cv.width - 50, 48, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '22px Rajdhani, monospace';
+      ctx.fillText('01:24:18', cv.width - 150, 54);
+
+      if (!isFront) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.font = '16px Rajdhani, monospace';
+        ctx.fillText('RockSteady 3.0+ · HorizonSteady', 32, cv.height - 32);
+        ctx.fillText('ISO 400 · 1/240s · EV 0.0', cv.width - 240, cv.height - 32);
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '28px Orbitron, monospace';
+        ctx.fillText('ACTION 4', 32, cv.height - 40);
+      }
+
+      const tex = new THREE.CanvasTexture(cv);
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    // 电池标签贴纸
+    function createBatteryTexture() {
+      const cv = document.createElement('canvas');
+      cv.width = 512;
+      cv.height = 256;
+      const ctx = cv.getContext('2d');
+
+      ctx.fillStyle = '#2b303a';
+      ctx.fillRect(0, 0, 512, 256);
+
+      ctx.fillStyle = '#ff9100';
+      ctx.fillRect(0, 0, 32, 256);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 36px Orbitron, sans-serif';
+      ctx.fillText('DJI EXTREME', 56, 68);
+
+      ctx.fillStyle = '#a0aec0';
+      ctx.font = '24px Rajdhani, sans-serif';
+      ctx.fillText('1770 mAh · 3.85V · 6.81Wh', 56, 114);
+      ctx.fillText('-20°C COLD RESISTANT', 56, 154);
+
+      ctx.fillStyle = '#ff9100';
+      ctx.font = 'bold 22px Rajdhani, sans-serif';
+      ctx.fillText('FAST CHARGING · Li-ion 1S1P', 56, 204);
+
+      return new THREE.CanvasTexture(cv);
+    }
+
+    // 镜头圈刻字与红线
+    function createLensRingTexture() {
+      const cv = document.createElement('canvas');
+      cv.width = 1024;
+      cv.height = 128;
+      const ctx = cv.getContext('2d');
+
+      ctx.fillStyle = '#181b22';
+      ctx.fillRect(0, 0, 1024, 128);
+
+      // 标志性红色线条
+      ctx.fillStyle = '#e63946';
+      ctx.fillRect(0, 0, 1024, 12);
+
+      // 刻字
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = 'bold 34px Rajdhani, monospace';
+      ctx.fillText('DJI OSMO ACTION 4 · 1/1.3" CMOS SENSOR · FOV 155° f/2.8', 40, 75);
+
+      const tex = new THREE.CanvasTexture(cv);
+      tex.wrapS = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    // 主板芯片阵列纹理
+    function createPCBTexture() {
+      const cv = document.createElement('canvas');
+      cv.width = 512;
+      cv.height = 512;
+      const ctx = cv.getContext('2d');
+
+      ctx.fillStyle = '#102e21';
+      ctx.fillRect(0, 0, 512, 512);
+
+      // 电路引线
+      ctx.strokeStyle = '#2d6a4f';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 40; i++) {
+        ctx.beginPath();
+        const startX = Math.random() * 512;
+        const startY = Math.random() * 512;
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(startX + (Math.random() - 0.5) * 160, startY);
+        ctx.lineTo(startX, startY + (Math.random() - 0.5) * 160);
+        ctx.stroke();
+      }
+
+      // 银色屏蔽罩与芯片
+      ctx.fillStyle = '#3f4e5a';
+      ctx.fillRect(140, 140, 230, 230);
+      ctx.strokeStyle = '#718096';
+      ctx.strokeRect(140, 140, 230, 230);
+
+      ctx.fillStyle = '#1a202c';
+      ctx.fillRect(190, 190, 130, 130);
+
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = 'bold 22px Orbitron, sans-serif';
+      ctx.fillText('DJI ISP', 210, 260);
+
+      return new THREE.CanvasTexture(cv);
+    }
+
+    const frontScreenTex = createScreenTexture(true);
+    const rearScreenTex = createScreenTexture(false);
+    const batteryTex = createBatteryTexture();
+    const lensRingTex = createLensRingTexture();
+    const pcbTex = createPCBTexture();
+
+    // ==========================================
+    // 5. 纯代码程序化构建 DJI Action 4 核心部件
+    // ==========================================
+    const partsGroup = new THREE.Group();
+    scene.add(partsGroup);
+
+    const partMeshes = {};
+
+    // 辅助材质构建函数
+    function createMetalMat(color, roughness = 0.35, metalness = 0.8) {
+      return new THREE.MeshStandardMaterial({
+        color,
+        roughness,
+        metalness
+      });
+    }
+
+    // 1. 可拆卸镜头保护圈与滤镜 (Lens Guard)
+    const gLensGuard = new THREE.Group();
+    {
+      // 橡胶防滑外圈
+      const ringGeo = new THREE.CylinderGeometry(1.68, 1.68, 0.42, 48, 1, true);
+      const ringMat = new THREE.MeshStandardMaterial({
+        map: lensRingTex,
+        roughness: 0.4,
+        metalness: 0.7
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2;
+      gLensGuard.add(ring);
+
+      // 镜头前缘倒角
+      const bezelGeo = new THREE.TorusGeometry(1.65, 0.1, 16, 48);
+      const bezelMat = createMetalMat(0x1a202c, 0.3, 0.9);
+      const bezel = new THREE.Mesh(bezelGeo, bezelMat);
+      bezel.position.z = 0.22;
+      gLensGuard.add(bezel);
+
+      // 光学防护玻璃（带双色绿/品红抗反射高光镀膜）
+      const glassGeo = new THREE.CircleGeometry(1.55, 48);
+      const glassMat = new THREE.MeshPhysicalMaterial({
+        color: 0x0a1418,
+        transmission: 0.92,
+        opacity: 0.95,
+        transparent: true,
+        roughness: 0.05,
+        ior: 1.52,
+        reflectivity: 0.8
+      });
+      const glass = new THREE.Mesh(glassGeo, glassMat);
+      glass.position.z = 0.18;
+      gLensGuard.add(glass);
+    }
+    gLensGuard.position.set(1.4, 0.2, 1.8);
+    partMeshes['lens_guard'] = gLensGuard;
+    partsGroup.add(gLensGuard);
+
+    // 2. 主镜头光学模组 (Lens Optics)
+    const gLensOptics = new THREE.Group();
+    {
+      const barrelGeo = new THREE.CylinderGeometry(1.42, 1.25, 0.75, 40);
+      const barrelMat = createMetalMat(0x11161d, 0.25, 0.9);
+      const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+      barrel.rotation.x = Math.PI / 2;
+      gLensOptics.add(barrel);
+
+      // 前组凸透镜
+      const lensElemGeo = new THREE.SphereGeometry(1.22, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.32);
+      const lensElemMat = new THREE.MeshPhysicalMaterial({
+        color: 0x001e2b,
+        transmission: 0.88,
+        transparent: true,
+        roughness: 0.04,
+        ior: 1.6
+      });
+      const lensElem = new THREE.Mesh(lensElemGeo, lensElemMat);
+      lensElem.position.z = 0.15;
+      gLensOptics.add(lensElem);
+    }
+    gLensOptics.position.set(1.4, 0.2, 1.3);
+    partMeshes['lens_optics'] = gLensOptics;
+    partsGroup.add(gLensOptics);
+
+    // 3. 1/1.3 英寸 CMOS 图像传感器 (CMOS Sensor)
+    const gCMOS = new THREE.Group();
+    {
+      // 传感器基板 PCB
+      const boardGeo = new THREE.BoxGeometry(2.6, 2.6, 0.12);
+      const boardMat = new THREE.MeshStandardMaterial({ color: 0x1a162b, roughness: 0.5, metalness: 0.6 });
+      const board = new THREE.Mesh(boardGeo, boardMat);
+      gCMOS.add(board);
+
+      // 1/1.3 英寸硅晶片（带幻彩光感）
+      const siliconGeo = new THREE.BoxGeometry(1.85, 1.45, 0.08);
+      const siliconMat = new THREE.MeshStandardMaterial({
+        color: 0x241740,
+        roughness: 0.15,
+        metalness: 0.95,
+        emissive: 0x190d33
+      });
+      const silicon = new THREE.Mesh(siliconGeo, siliconMat);
+      silicon.position.z = 0.08;
+      gCMOS.add(silicon);
+
+      // 导热紫铜背板
+      const copperGeo = new THREE.BoxGeometry(2.4, 2.4, 0.06);
+      const copperMat = createMetalMat(0xd47a3d, 0.2, 0.9);
+      const copper = new THREE.Mesh(copperGeo, copperMat);
+      copper.position.z = -0.09;
+      gCMOS.add(copper);
+    }
+    gCMOS.position.set(1.4, 0.2, 0.8);
+    partMeshes['cmos_sensor'] = gCMOS;
+    partsGroup.add(gCMOS);
+
+    // 4. 前置 1.4 英寸触控屏幕 (Front Screen)
+    const gFrontScreen = new THREE.Group();
+    {
+      const frameGeo = new THREE.BoxGeometry(2.2, 2.2, 0.16);
+      const frameMat = createMetalMat(0x181e26, 0.4, 0.8);
+      const frame = new THREE.Mesh(frameGeo, frameMat);
+      gFrontScreen.add(frame);
+
+      // 前显示屏
+      const displayGeo = new THREE.PlaneGeometry(1.95, 1.95);
+      const displayMat = new THREE.MeshBasicMaterial({ map: frontScreenTex });
+      const display = new THREE.Mesh(displayGeo, displayMat);
+      display.position.z = 0.09;
+      gFrontScreen.add(display);
+    }
+    gFrontScreen.position.set(-1.8, 0.1, 1.55);
+    partMeshes['front_screen'] = gFrontScreen;
+    partsGroup.add(gFrontScreen);
+
+    // 5. 镁铝合金机身中框骨架 (Main Chassis)
+    const gChassis = new THREE.Group();
+    {
+      // 主机壳主体（倒角长方体）
+      const bodyGeo = new THREE.BoxGeometry(6.9, 4.3, 2.8);
+      const bodyMat = createMetalMat(0x232933, 0.55, 0.65);
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.castShadow = true;
+      body.receiveShadow = true;
+      gChassis.add(body);
+
+      // 顶部快门按键（带标志性红点）
+      const shutterGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.3, 24);
+      const shutterMat = createMetalMat(0x11161d, 0.3, 0.8);
+      const shutter = new THREE.Mesh(shutterGeo, shutterMat);
+      shutter.position.set(-1.8, 2.25, 0);
+      gChassis.add(shutter);
+
+      const redDotGeo = new THREE.CircleGeometry(0.2, 16);
+      const redDotMat = new THREE.MeshBasicMaterial({ color: 0xe63946 });
+      const redDot = new THREE.Mesh(redDotGeo, redDotMat);
+      redDot.rotation.x = -Math.PI / 2;
+      redDot.position.set(-1.8, 2.41, 0);
+      gChassis.add(redDot);
+
+      // 侧边 QS (Quick Switch) 模式按键
+      const qsBtnGeo = new THREE.BoxGeometry(0.25, 0.7, 0.45);
+      const qsBtn = new THREE.Mesh(qsBtnGeo, shutterMat);
+      qsBtn.position.set(-3.55, 0.4, 0);
+      gChassis.add(qsBtn);
+
+      // 前脸磨砂材质板
+      const faceplateGeo = new THREE.BoxGeometry(6.7, 4.1, 0.2);
+      const faceplateMat = createMetalMat(0x1d232c, 0.65, 0.5);
+      const faceplate = new THREE.Mesh(faceplateGeo, faceplateMat);
+      faceplate.position.z = 1.35;
+      gChassis.add(faceplate);
+    }
+    gChassis.position.set(0, 0, 0);
+    partMeshes['chassis'] = gChassis;
+    partsGroup.add(gChassis);
+
+    // 6. 主控主板与处理器核心 (Mainboard)
+    const gMainboard = new THREE.Group();
+    {
+      const pcbGeo = new THREE.BoxGeometry(5.8, 3.4, 0.16);
+      const pcbMat = new THREE.MeshStandardMaterial({
+        map: pcbTex,
+        roughness: 0.4,
+        metalness: 0.5
+      });
+      const pcb = new THREE.Mesh(pcbGeo, pcbMat);
+      gMainboard.add(pcb);
+
+      // 金属散热护盾
+      const shieldGeo = new THREE.BoxGeometry(2.4, 2.2, 0.35);
+      const shieldMat = createMetalMat(0x718096, 0.25, 0.95);
+      const shield = new THREE.Mesh(shieldGeo, shieldMat);
+      shield.position.set(-0.6, 0, 0.2);
+      gMainboard.add(shield);
+    }
+    gMainboard.position.set(-0.2, 0, 0.1);
+    partMeshes['mainboard'] = gMainboard;
+    partsGroup.add(gMainboard);
+
+    // 7. 后置 2.25 英寸高亮触控主屏幕 (Rear Screen)
+    const gRearScreen = new THREE.Group();
+    {
+      const frameGeo = new THREE.BoxGeometry(6.6, 3.9, 0.18);
+      const frameMat = createMetalMat(0x131820, 0.3, 0.9);
+      const frame = new THREE.Mesh(frameGeo, frameMat);
+      gRearScreen.add(frame);
+
+      const displayGeo = new THREE.PlaneGeometry(6.3, 3.6);
+      const displayMat = new THREE.MeshBasicMaterial({ map: rearScreenTex });
+      const display = new THREE.Mesh(displayGeo, displayMat);
+      display.rotation.y = Math.PI;
+      display.position.z = -0.1;
+      gRearScreen.add(display);
+    }
+    gRearScreen.position.set(0, 0, -1.48);
+    partMeshes['rear_screen'] = gRearScreen;
+    partsGroup.add(gRearScreen);
+
+    // 8. 耐寒长续航锂电池组 (Battery)
+    const gBattery = new THREE.Group();
+    {
+      const batGeo = new THREE.BoxGeometry(2.2, 3.4, 1.8);
+      const batMat = new THREE.MeshStandardMaterial({
+        map: batteryTex,
+        roughness: 0.45,
+        metalness: 0.35
+      });
+      const bat = new THREE.Mesh(batGeo, batMat);
+      gBattery.add(bat);
+
+      // 顶部拉带
+      const tabGeo = new THREE.BoxGeometry(0.8, 0.4, 0.1);
+      const tabMat = new THREE.MeshStandardMaterial({ color: 0xff9100, roughness: 0.8 });
+      const tab = new THREE.Mesh(tabGeo, tabMat);
+      tab.position.set(0, 1.85, 0);
+      gBattery.add(tab);
+    }
+    gBattery.position.set(1.9, 0, 0);
+    partMeshes['battery'] = gBattery;
+    partsGroup.add(gBattery);
+
+    // 9. 防水密封电池仓门 (Battery Door)
+    const gDoor = new THREE.Group();
+    {
+      const doorGeo = new THREE.BoxGeometry(0.35, 3.8, 2.2);
+      const doorMat = createMetalMat(0x28303d, 0.5, 0.7);
+      const door = new THREE.Mesh(doorGeo, doorMat);
+      gDoor.add(door);
+
+      // 防水硅胶圈 (红色/橙色胶圈)
+      const sealGeo = new THREE.BoxGeometry(0.1, 3.6, 2.0);
+      const sealMat = new THREE.MeshStandardMaterial({ color: 0xff5400, roughness: 0.9 });
+      const seal = new THREE.Mesh(sealGeo, sealMat);
+      seal.position.x = -0.15;
+      gDoor.add(seal);
+
+      // 外部推压锁扣
+      const lockGeo = new THREE.BoxGeometry(0.12, 0.9, 0.5);
+      const lockMat = createMetalMat(0x0f131a, 0.3, 0.9);
+      const lock = new THREE.Mesh(lockGeo, lockMat);
+      lock.position.x = 0.2;
+      gDoor.add(lock);
+    }
+    gDoor.position.set(3.55, 0, 0);
+    partMeshes['battery_door'] = gDoor;
+    partsGroup.add(gDoor);
+
+    // 10. 磁吸快拆底座系统 (Magnetic Base)
+    const gBase = new THREE.Group();
+    {
+      const baseGeo = new THREE.BoxGeometry(3.6, 0.5, 2.2);
+      const baseMat = createMetalMat(0x181e28, 0.35, 0.85);
+      const base = new THREE.Mesh(baseGeo, baseMat);
+      gBase.add(base);
+
+      // 双侧金属弹簧卡扣
+      const clipGeo = new THREE.BoxGeometry(0.3, 0.4, 0.8);
+      const clipMat = createMetalMat(0x00e5ff, 0.2, 0.9);
+      const clipL = new THREE.Mesh(clipGeo, clipMat);
+      clipL.position.set(-1.85, 0, 0);
+      const clipR = new THREE.Mesh(clipGeo, clipMat);
+      clipR.position.set(1.85, 0, 0);
+      gBase.add(clipL);
+      gBase.add(clipR);
+
+      // 双爪定位槽
+      const prongGeo = new THREE.BoxGeometry(0.6, 0.6, 0.35);
+      const prong1 = new THREE.Mesh(prongGeo, baseMat);
+      prong1.position.set(-0.8, -0.45, 0);
+      const prong2 = new THREE.Mesh(prongGeo, baseMat);
+      prong2.position.set(0.8, -0.45, 0);
+      gBase.add(prong1);
+      gBase.add(prong2);
+    }
+    gBase.position.set(0, -2.3, 0);
+    partMeshes['magnetic_base'] = gBase;
+    partsGroup.add(gBase);
+
+    // 记录各部件的装配初始位置
+    const initialTransforms = {};
+    PARTS_DATA.forEach(p => {
+      const mesh = partMeshes[p.id];
+      if (mesh) {
+        initialTransforms[p.id] = {
+          pos: mesh.position.clone(),
+          rot: mesh.rotation.clone()
+        };
+      }
+    });
+
+    // ==========================================
+    // 6. 交互逻辑、拆解插值与动画系统
+    // ==========================================
+    let explodeProgress = 0; // 0: 完全组装, 1: 完全拆解
+    let targetExplode = 0;
+    let autoRotate = false;
+    let isXRay = false;
+    let selectedPartId = 'cmos_sensor';
+
+    // 缓动更新拆解形态
+    function updateExplodedTransforms() {
+      PARTS_DATA.forEach(p => {
+        const mesh = partMeshes[p.id];
+        const initT = initialTransforms[p.id];
+        if (mesh && initT) {
+          // 当前位置 = 初始组装位置 + 拆解偏移量 * explodeProgress
+          mesh.position.x = initT.pos.x + p.explodeOffset.x * explodeProgress;
+          mesh.position.y = initT.pos.y + p.explodeOffset.y * explodeProgress;
+          mesh.position.z = initT.pos.z + p.explodeOffset.z * explodeProgress;
+        }
+      });
+    }
+
+    // 设置高亮与发光效果
+    function highlightPart(partId) {
+      selectedPartId = partId;
+
+      PARTS_DATA.forEach(p => {
+        const mesh = partMeshes[p.id];
+        const isSelected = (p.id === partId);
+
+        if (mesh) {
+          mesh.traverse(child => {
+            if (child.isMesh && child.material && (child.material.isMeshStandardMaterial || child.material.isMeshPhysicalMaterial)) {
+              if (isSelected) {
+                child.material.emissive = new THREE.Color(p.accent || 0x00e5ff);
+                child.material.emissiveIntensity = 0.65;
+              } else {
+                child.material.emissive = new THREE.Color(0x000000);
+                child.material.emissiveIntensity = 0;
+              }
+            }
+          });
+        }
+      });
+
+      // 更新列表激活状态
+      document.querySelectorAll('.part-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.id === partId);
+      });
+
+      // 更新右侧技术详情面板
+      const data = PARTS_DATA.find(p => p.id === partId);
+      if (data) {
+        document.getElementById('part-category').textContent = data.category;
+        document.getElementById('part-title').textContent = data.name;
+        document.getElementById('part-desc').textContent = data.desc;
+
+        const specsContainer = document.getElementById('part-specs');
+        specsContainer.innerHTML = '';
+        data.specs.forEach(s => {
+          const box = document.createElement('div');
+          box.className = 'spec-box';
+          box.innerHTML = `<div class="spec-key">${s.k}</div><div class="spec-val">${s.v}</div>`;
+          specsContainer.appendChild(box);
+        });
+
+        // 浮动指示标签
+        updateFloatingCallout(partId);
+      }
+    }
+
+    // 更新 3D 浮动标签位置
+    const calloutEl = document.getElementById('floating-callout');
+    const calloutTextEl = document.getElementById('callout-text');
+
+    function updateFloatingCallout(partId) {
+      const mesh = partMeshes[partId];
+      const data = PARTS_DATA.find(p => p.id === partId);
+      if (!mesh || !data) {
+        calloutEl.style.display = 'none';
+        return;
+      }
+
+      calloutTextEl.textContent = data.name;
+      calloutEl.style.display = 'flex';
+
+      const worldPos = new THREE.Vector3();
+      mesh.getWorldPosition(worldPos);
+      worldPos.y += 0.8; // 标在零件上方
+
+      const screenPos = worldPos.clone().project(camera);
+      // 检查是否在屏幕可视范围内
+      if (screenPos.z < 1) {
+        const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
+        const y = -(screenPos.y * 0.5 - 0.5) * window.innerHeight;
+        calloutEl.style.left = `${x}px`;
+        calloutEl.style.top = `${y}px`;
+      } else {
+        calloutEl.style.display = 'none';
+      }
+    }
+
+    // 相机平滑飞至目标部件
+    let targetCameraPos = null;
+    let targetLookAt = null;
+
+    function focusCameraOnPart(partId) {
+      const mesh = partMeshes[partId];
+      if (!mesh) return;
+
+      const worldPos = new THREE.Vector3();
+      mesh.getWorldPosition(worldPos);
+
+      targetLookAt = worldPos.clone();
+      targetCameraPos = worldPos.clone().add(new THREE.Vector3(3.5, 2.5, 4.5));
+    }
+
+    // X光透视效果切换
+    function toggleXRay() {
+      isXRay = !isXRay;
+      document.getElementById('btn-xray').classList.toggle('active', isXRay);
+
+      partsGroup.traverse(child => {
+        if (child.isMesh && child.material) {
+          if (child.parent === gChassis) {
+            child.material.transparent = true;
+            child.material.opacity = isXRay ? 0.32 : 1.0;
+            child.material.wireframe = isXRay;
+          }
+        }
+      });
+    }
+
+    // ==========================================
+    // 7. UI 面板生成与事件绑定
+    // ==========================================
+    const partsListContainer = document.getElementById('parts-list');
+    PARTS_DATA.forEach((p, idx) => {
+      const item = document.createElement('div');
+      item.className = `part-item ${p.id === selectedPartId ? 'active' : ''}`;
+      item.dataset.id = p.id;
+      item.innerHTML = `
+        <div class="part-info">
+          <div class="part-name">${idx + 1}. ${p.name}</div>
+          <div class="part-tag">${p.tag}</div>
+        </div>
+        <div class="part-indicator"></div>
+      `;
+      item.addEventListener('click', () => {
+        highlightPart(p.id);
+        focusCameraOnPart(p.id);
+      });
+      partsListContainer.appendChild(item);
+    });
+
+    // 拆解滑块交互
+    const slider = document.getElementById('explode-slider');
+    const sliderVal = document.getElementById('explode-value');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('explode')) {
+      const initExp = Math.min(100, Math.max(0, parseFloat(urlParams.get('explode'))));
+      targetExplode = initExp / 100;
+      explodeProgress = targetExplode;
+      slider.value = initExp;
+      sliderVal.textContent = Math.round(initExp) + '%';
+      updateExplodedTransforms();
+    }
+
+    slider.addEventListener('input', (e) => {
+      targetExplode = parseFloat(e.target.value) / 100;
+    });
+
+    // 一键拆解与复原
+    document.getElementById('btn-explode').addEventListener('click', () => {
+      targetExplode = 1.0;
+      slider.value = 100;
+    });
+
+    document.getElementById('btn-assemble').addEventListener('click', () => {
+      targetExplode = 0.0;
+      slider.value = 0;
+    });
+
+    document.getElementById('btn-xray').addEventListener('click', toggleXRay);
+
+    document.getElementById('btn-auto-rotate').addEventListener('click', () => {
+      autoRotate = !autoRotate;
+      document.getElementById('btn-auto-rotate').classList.toggle('active', autoRotate);
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      targetCameraPos = new THREE.Vector3(9, 6, 11);
+      targetLookAt = new THREE.Vector3(0, 0, 0);
+      targetExplode = 0.0;
+      slider.value = 0;
+      if (isXRay) toggleXRay();
+    });
+
+    document.getElementById('focus-btn').addEventListener('click', () => {
+      focusCameraOnPart(selectedPartId);
+    });
+
+    // 鼠标点击 3D 拾取 (Raycasting)
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    window.addEventListener('pointerdown', (e) => {
+      // 排除 UI 面板点击
+      if (e.target.closest('header, aside, nav, .floating-callout')) return;
+
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(partsGroup.children, true);
+
+      if (intersects.length > 0) {
+        let hitObj = intersects[0].object;
+        // 向上寻找所属的顶层部件 Group
+        while (hitObj.parent && hitObj.parent !== partsGroup) {
+          hitObj = hitObj.parent;
+        }
+
+        for (const [id, mesh] of Object.entries(partMeshes)) {
+          if (mesh === hitObj) {
+            highlightPart(id);
+            break;
+          }
+        }
+      }
+    });
+
+    // 窗口尺寸自适应
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ==========================================
+    // 8. 主渲染循环 (Render Loop)
+    // ==========================================
+    highlightPart('cmos_sensor');
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // 平滑插值拆解进度
+      explodeProgress += (targetExplode - explodeProgress) * 0.08;
+      updateExplodedTransforms();
+      sliderVal.textContent = `${Math.round(explodeProgress * 100)}%`;
+
+      // 相机平滑飞行运镜
+      if (targetCameraPos && targetLookAt) {
+        camera.position.lerp(targetCameraPos, 0.06);
+        controls.target.lerp(targetLookAt, 0.06);
+        if (camera.position.distanceTo(targetCameraPos) < 0.05) {
+          targetCameraPos = null;
+          targetLookAt = null;
+        }
+      }
+
+      // 自动旋转巡检
+      if (autoRotate) {
+        partsGroup.rotation.y += 0.006;
+      }
+
+      // 浮动环境微粒微动
+      particles.rotation.y += 0.0008;
+
+      controls.update();
+
+      // 更新 3D 标签屏幕投影
+      if (selectedPartId) {
+        updateFloatingCallout(selectedPartId);
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
